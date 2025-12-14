@@ -6,14 +6,14 @@
     "name": "Hillel BH",
     "email": "geminidesksupport@proton.me"
   },
-  "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "browse": "node browser.js",
-    "build": "electron-builder",
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build",
     "test": "jest"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.9.6",
     "electron": "^35.7.5",
     "electron-builder": "^26.0.12",
     "jest": "^30.2.0"

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeminiDesk</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            overflow: hidden;
+            background: #1a1a1a;
+        }
+        
+        #titlebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: #2d2d2d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 10px;
+            z-index: 10000;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+        
+        #titlebar-title {
+            color: #fff;
+            font-size: 12px;
+            flex: 1;
+            text-align: center;
+        }
+        
+        #titlebar-buttons {
+            display: flex;
+            gap: 5px;
+            -webkit-app-region: no-drag;
+        }
+        
+        .titlebar-button {
+            width: 30px;
+            height: 20px;
+            border: none;
+            background: transparent;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+        
+        .titlebar-button:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .titlebar-button.close:hover {
+            background: #e81123;
+        }
+        
+        #content {
+            position: fixed;
+            top: 30px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #fff;
+        }
+        
+        #gemini-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="titlebar">
+        <div id="titlebar-title">GeminiDesk</div>
+        <div id="titlebar-buttons">
+            <button class="titlebar-button" id="minimize">─</button>
+            <button class="titlebar-button" id="maximize">□</button>
+            <button class="titlebar-button close" id="close">✕</button>
+        </div>
+    </div>
+    
+    <div id="content">
+        <div id="loading">Loading Gemini...</div>
+        <iframe id="gemini-frame" src="https://gemini.google.com/app" sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
+    </div>
+    
+    <script>
+        // Tauri API will be available here
+        const { invoke } = window.__TAURI__.core;
+        const { getCurrentWindow } = window.__TAURI__.window;
+        
+        const currentWindow = getCurrentWindow();
+        
+        // Window controls
+        document.getElementById('minimize').addEventListener('click', async () => {
+            await invoke('minimize_window');
+        });
+        
+        document.getElementById('maximize').addEventListener('click', async () => {
+            await invoke('maximize_window');
+        });
+        
+        document.getElementById('close').addEventListener('click', async () => {
+            await invoke('close_window');
+        });
+        
+        // Hide loading message when iframe loads
+        document.getElementById('gemini-frame').addEventListener('load', () => {
+            document.getElementById('loading').style.display = 'none';
+        });
+        
+        // Listen for title changes in iframe
+        setInterval(() => {
+            try {
+                const iframe = document.getElementById('gemini-frame');
+                if (iframe.contentWindow && iframe.contentWindow.document) {
+                    const title = iframe.contentWindow.document.title;
+                    if (title) {
+                        document.getElementById('titlebar-title').textContent = title;
+                    }
+                }
+            } catch (e) {
+                // Cross-origin access will fail, that's ok
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
