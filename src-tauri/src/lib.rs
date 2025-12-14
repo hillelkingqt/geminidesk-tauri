@@ -1,11 +1,20 @@
 use tauri::{Manager, Window, WebviewUrl, WebviewWindowBuilder};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+// Helper to get current timestamp in milliseconds
+fn current_timestamp_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
+}
 
 // Commands that will be called from the frontend
 #[tauri::command]
 fn create_window(app: tauri::AppHandle, url: String, title: Option<String>) -> Result<(), String> {
-    let window_label = format!("window_{}", chrono::Utc::now().timestamp_millis());
+    let window_label = format!("window_{}", current_timestamp_ms());
     
     WebviewWindowBuilder::new(&app, &window_label, WebviewUrl::External(url.parse().map_err(|e| format!("Invalid URL: {:?}", e))?))
         .title(title.unwrap_or_else(|| "GeminiDesk".to_string()))
@@ -21,15 +30,9 @@ fn create_window(app: tauri::AppHandle, url: String, title: Option<String>) -> R
 }
 
 #[tauri::command]
-fn open_url(_url: String) -> Result<(), String> {
-    // This will be called from Tauri context
-    Ok(())
-}
-
-#[tauri::command]
 fn show_window(window: Window) -> Result<(), String> {
     window.show().map_err(|e| format!("Failed to show window: {:?}", e))?;
-    window.set_focus().map_err(|e| format!("Failed to focus window: {:?}", e))?;
+    let _ = window.set_focus(); // Ignore errors as this may not be supported on all platforms
     Ok(())
 }
 
@@ -126,7 +129,7 @@ pub fn run() {
                         "new_window" => {
                             let _ = WebviewWindowBuilder::new(
                                 app,
-                                format!("window_{}", chrono::Utc::now().timestamp_millis()),
+                                format!("window_{}", current_timestamp_ms()),
                                 WebviewUrl::External("https://gemini.google.com".parse().unwrap())
                             )
                             .title("GeminiDesk")
@@ -152,7 +155,6 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             create_window,
-            open_url,
             show_window,
             hide_window,
             minimize_window,
