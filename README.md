@@ -183,8 +183,15 @@ These builds include the latest fixes and improvements that haven't been release
 Want to peek under the hood or forge your own version? We admire your courage.
 
 ### Prerequisites
-* [Node.js](https://nodejs.org/) (v16 or higher is a good life choice)
+* [Node.js](https://nodejs.org/) (v18 or higher is recommended)
+* [Rust](https://www.rust-lang.org/) (latest stable version)
 * [Git](https://git-scm.com/)
+
+On Linux, you'll also need some additional dependencies:
+```sh
+sudo apt-get update
+sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev
+```
 
 ### Get Started
 
@@ -201,14 +208,16 @@ Want to peek under the hood or forge your own version? We admire your courage.
 
 3.  **Unleash the beast (run in dev mode):**
     ```sh
-    npm start
+    npm run dev
     ```
 
 4.  **Package it for the masses (build the installer):**
-    The final artifact will be forged in the `dist/` directory.
+    The final artifacts will be forged in the `src-tauri/target/release/bundle/` directory.
     ```sh
     npm run build
     ```
+
+**Note:** GeminiDesk is now built with [Tauri](https://tauri.app/), a modern framework that provides better performance, smaller bundle sizes, and enhanced security compared to the previous Electron version.
 
 ---
 
