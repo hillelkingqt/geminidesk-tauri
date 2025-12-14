@@ -22,7 +22,6 @@ fn create_window(app: tauri::AppHandle, url: String, title: Option<String>) -> R
         .min_inner_size(800.0, 600.0)
         .resizable(true)
         .decorations(false)
-        .transparent(true)
         .build()
         .map_err(|e| format!("Failed to create window: {:?}", e))?;
     
