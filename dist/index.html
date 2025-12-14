@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeminiDesk</title>
+  <style>
+    :root { color-scheme: dark light; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: radial-gradient(circle at 30% 30%, #1a237e 0, #0b1026 40%, #060712 80%);
+      color: #f7f9ff;
+      text-align: center;
+    }
+    .card {
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 28px;
+      max-width: 460px;
+      box-shadow: 0 20px 45px rgba(0,0,0,0.45);
+    }
+    h1 { margin: 0 0 12px; font-size: 24px; }
+    p { margin: 0 0 18px; line-height: 1.5; color: #cfd8ff; }
+    .actions { display: flex; gap: 12px; justify-content: center; }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 18px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #0b1026;
+      background: linear-gradient(135deg, #4b90ff, #ff5546);
+      box-shadow: 0 8px 22px rgba(75, 144, 255, 0.35);
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    button.secondary {
+      background: rgba(255, 255, 255, 0.14);
+      color: #f7f9ff;
+      box-shadow: none;
+    }
+    button:active { transform: translateY(1px); box-shadow: 0 4px 12px rgba(75, 144, 255, 0.3); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Launching GeminiDesk</h1>
+    <p>We are redirecting you to the Gemini web experience inside a lightweight Tauri shell.</p>
+    <div class="actions">
+      <button type="button" data-retry>Retry in-app</button>
+      <button class="secondary" type="button" data-open-external>Open in browser</button>
+    </div>
+  </div>
+  <script type="module" src="../main.js"></script>
+</body>
+</html>

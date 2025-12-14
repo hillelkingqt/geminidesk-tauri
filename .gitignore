@@ -1,0 +1,8 @@
+node_modules/
+.dsym/
+packaged/
+.DS_Store
+src-tauri/target/
+target/
+*.log
+*.lockb
