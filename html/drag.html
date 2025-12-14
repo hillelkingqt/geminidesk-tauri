@@ -1,0 +1,1259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Gemini Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --background-primary: #121212;
+            --background-secondary: #1E1E1E;
+            --text-primary: #E0E0E0;
+            --text-secondary: #A0A0A0;
+            --accent-glow: #00BFFF;
+            --tooltip-background: #333333;
+            --border-color: #333;
+        }
+
+        html.light-mode {
+            --background-primary: #ffffff;
+            --background-secondary: #ffffff;
+            --text-primary: #212121;
+            --text-secondary: #757575;
+            --accent-glow: #007aff;
+            --tooltip-background: #ffffff;
+            --border-color: #e0e0e0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--background-primary);
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+            color: var(--text-primary);
+        }
+
+        .top-bar {
+            width: 100%;
+            height: 38px;
+            -webkit-app-region: drag;
+            background: var(--background-secondary);
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 12px;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        #chat-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: calc(100% - 150px);
+            -webkit-app-region: drag;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #chat-title.fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        #chat-title.generating {
+            font-style: italic;
+            color: var(--text-secondary);
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+
+        #chat-title.loading {
+            font-weight: 500;
+            color: var(--text-secondary);
+            animation: loadingDots 1.4s infinite ease-in-out;
+            position: relative;
+        }
+
+        #chat-title.loading::after {
+            content: '...';
+            position: absolute;
+            animation: dots 1.4s infinite steps(4);
+        }
+
+        #chat-title.slide-in {
+            animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        @keyframes loadingDots {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes dots {
+            0% { content: ''; }
+            25% { content: '.'; }
+            50% { content: '..'; }
+            75% { content: '...'; }
+        }
+
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(15px) scale(0.98);
+                filter: blur(2px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
+        }
+
+        .button-container {
+            display: flex;
+            align-items: center;
+            -webkit-app-region: no-drag;
+        }
+
+        .icon-button {
+            -webkit-app-region: no-drag;
+            width: 30px;
+            height: 30px;
+            border: none;
+            background: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.3s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            margin-left: 6px;
+        }
+
+        .icon-button svg {
+            width: 22px;
+            height: 22px;
+            transition: stroke 0.3s ease, transform 0.4s ease, fill 0.3s ease;
+            stroke: var(--text-secondary);
+            stroke-width: 1.5;
+        }
+
+        .icon-button#settings-button svg,
+        .icon-button#export-chat-button svg {
+            stroke-width: 0;
+            fill: var(--text-secondary);
+        }
+
+        .icon-button#mode-toggle-button svg {
+            stroke-width: 0;
+            stroke: none;
+        }
+
+        .icon-button:hover {
+            transform: scale(1.1);
+        }
+
+        .icon-button:hover svg {
+            stroke: var(--accent-glow);
+            fill: var(--accent-glow);
+            filter: drop-shadow(0 0 5px var(--accent-glow));
+        }
+
+        /* Override generic hover for mode toggle - it has its own colors */
+        .icon-button#mode-toggle-button:hover svg {
+            stroke: none;
+        }
+
+        #new-window-button:hover svg {
+            transform: rotate(90deg);
+        }
+
+        #settings-button:hover svg {
+            transform: rotate(90deg) scale(1.1);
+        }
+
+        html[dir="rtl"] .icon-button {
+            margin-left: 0;
+            margin-right: 6px;
+        }
+
+        /* SortableJS Styles */
+        .sortable-ghost {
+            opacity: 0.4;
+            background-color: #444;
+        }
+
+        .sortable-chosen {
+            cursor: grabbing;
+        }
+
+        .icon-button.sortable-drag {
+            cursor: grabbing;
+        }
+
+        /* Mode Toggle Button Styles */
+        #mode-toggle-button {
+            position: relative;
+        }
+
+        #mode-toggle-button .mode-icon {
+            display: none;
+        }
+
+        #mode-toggle-button .mode-icon.active {
+            display: block;
+        }
+
+        #mode-toggle-button .gemini-icon {
+            fill: #8ab4f8;
+        }
+
+        #mode-toggle-button .aistudio-icon {
+            fill: #81c995;
+        }
+
+        #mode-toggle-button:hover .gemini-icon {
+            fill: #8ab4f8;
+            filter: drop-shadow(0 0 5px #8ab4f8);
+        }
+
+        #mode-toggle-button:hover .aistudio-icon {
+            fill: #81c995;
+            filter: drop-shadow(0 0 5px #81c995);
+        }
+
+        html.light-mode #mode-toggle-button .gemini-icon {
+            fill: #1a73e8;
+        }
+
+        html.light-mode #mode-toggle-button .aistudio-icon {
+            fill: #1e8e3e;
+        }
+
+        html.light-mode #mode-toggle-button:hover .gemini-icon {
+            fill: #1a73e8;
+            filter: drop-shadow(0 0 5px #1a73e8);
+        }
+
+        html.light-mode #mode-toggle-button:hover .aistudio-icon {
+            fill: #1e8e3e;
+            filter: drop-shadow(0 0 5px #1e8e3e);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="top-bar">
+        <span id="chat-title"></span>
+        <div class="button-container">
+            <button id="mode-toggle-button" class="icon-button" data-tooltip="Switch to AI Studio mode">
+                <!-- Gemini Icon (Sparkle) - shown when in Gemini mode, click to switch to AI Studio -->
+                <svg class="mode-icon gemini-icon active" viewBox="0 0 65 65" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M57.8647 29.0109C52.865 26.8587 48.4905 23.9061 44.7393 20.1567C40.99 16.4074 38.0373 12.031 35.8851 7.03132C35.0589 5.11516 34.395 3.14552 33.886 1.12608C33.72 0.465846 33.128 0.00109863 32.4475 0.00109863C31.7669 0.00109863 31.1749 0.465846 31.009 1.12608C30.4999 3.14552 29.836 5.11332 29.0098 7.03132C26.8576 12.031 23.905 16.4074 20.1556 20.1567C16.4063 23.9061 12.0299 26.8587 7.03022 29.0109C5.11406 29.8371 3.14442 30.501 1.12498 31.0101C0.464747 31.176 0 31.768 0 32.4486C0 33.1291 0.464747 33.7211 1.12498 33.8871C3.14442 34.3961 5.11222 35.06 7.03022 35.8862C12.0299 38.0384 16.4045 40.9911 20.1556 44.7404C23.9068 48.4897 26.8576 52.8661 29.0098 57.8658C29.836 59.782 30.4999 61.7516 31.009 63.771C31.1749 64.4313 31.7669 64.896 32.4475 64.896C33.128 64.896 33.72 64.4313 33.886 63.771C34.395 61.7516 35.0589 59.7838 35.8851 57.8658C38.0373 52.8661 40.99 48.4916 44.7393 44.7404C48.4886 40.9911 52.865 38.0384 57.8647 35.8862C59.7809 35.06 61.7505 34.3961 63.7699 33.8871C64.4302 33.7211 64.8949 33.1291 64.8949 32.4486C64.8949 31.768 64.4302 31.176 63.7699 31.0101C61.7505 30.501 59.7827 29.8371 57.8647 29.0109Z" fill="currentColor"></path>
+                </svg>
+                <!-- AI Studio Icon - shown when in AI Studio mode, click to switch to Gemini -->
+                <svg class="mode-icon aistudio-icon" aria-label="Google AI Studio logo" viewBox="0 0 299 310" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M125.365 32C120.691 38.5727 116.782 45.7277 113.766 53.334H64C40.4361 53.3342 21.3342 72.4361 21.334 96V245.334C21.3344 268.898 40.4362 288 64 288H213.334C236.898 288 256 268.898 256 245.334V179.93C263.778 175.739 270.945 170.561 277.334 164.563V245.334C277.334 280.68 248.68 309.334 213.334 309.334H64C28.6542 309.334 0.00038177 280.68 0 245.334V96C0.000171479 60.654 28.654 32.0002 64 32H125.365Z" fill="currentColor"></path>
+                    <path d="M281.333 71.5244C269.006 66.218 258.221 58.9383 248.972 49.6942C239.728 40.4502 232.448 29.6601 227.142 17.3332C225.105 12.6088 223.468 7.75264 222.213 2.77367C221.804 1.14585 220.344 0 218.666 0C216.988 0 215.529 1.14585 215.12 2.77367C213.865 7.75264 212.228 12.6043 210.191 17.3332C204.884 29.6601 197.605 40.4502 188.36 49.6942C179.116 58.9383 168.326 66.218 155.999 71.5244C151.275 73.5614 146.419 75.1984 141.44 76.4533C139.812 76.8626 138.666 78.3222 138.666 80C138.666 81.6778 139.812 83.1374 141.44 83.5467C146.419 84.8016 151.271 86.4386 155.999 88.4756C168.326 93.782 179.112 101.062 188.36 110.306C197.609 119.55 204.884 130.34 210.191 142.667C212.228 147.391 213.865 152.247 215.12 157.226C215.529 158.854 216.988 160 218.666 160C220.344 160 221.804 158.854 222.213 157.226C223.468 152.247 225.105 147.396 227.142 142.667C232.448 130.34 239.728 119.554 248.972 110.306C258.216 101.062 269.006 93.782 281.333 88.4756C286.057 86.4386 290.914 84.8016 295.893 83.5467C297.52 83.1374 298.666 81.6778 298.666 80C298.666 78.3222 297.52 76.8626 295.893 76.4533C290.914 75.1984 286.062 73.5614 281.333 71.5244Z" fill="currentColor"></path>
+                </svg>
+            </button>
+            <button id="new-window-button" class="icon-button" data-tooltip-i18n="tooltip-new-chat">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 4V20M4 12H20" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+            <button id="minimize-button" class="icon-button" data-tooltip-i18n="tooltip-minimize">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 12H19" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+            <button id="fullscreen-button" class="icon-button" data-tooltip-i18n="tooltip-fullscreen">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path class="enter-fullscreen" d="M16 3h5v5M8 3H3v5M16 21h5v-5M8 21H3v-5" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                    <path class="exit-fullscreen" d="M21 8V3h-5M3 8V3h5M21 16v5h-5M3 16v5h5" stroke-linecap="round"
+                        stroke-linejoin="round" style="display: none;" />
+                </svg>
+            </button>
+            <button id="settings-button" class="icon-button" data-tooltip-i18n="tooltip-settings">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.69-1.62-0.92L14.4,2.28c-0.05-0.24-0.27-0.42-0.51-0.42 h-3.8c-0.24,0-0.46,0.18-0.51,0.42l-0.58,2.52C8.41,5.55,7.88,5.86,7.38,6.24l-2.39-0.96c-0.22-0.08-0.47,0-0.59,0.22 l-1.92,3.32c-0.11,0.2-0.06,0.47,0.12,0.61l2.03,1.58C4.02,11.36,4,11.68,4,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.69,1.62,0.92 l0.58,2.52c0.05,0.24,0.27,0.42,0.51,0.42h3.8c0.24,0,0.46,0.18-0.51,0.42l0.58-2.52c0.6-0.23,1.12-0.54,1.62-0.92l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.11-0.2,0.06-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+                        fill="currentColor" />
+                </svg>
+            </button>
+            <button id="export-chat-button" class="icon-button" data-tooltip-i18n="tooltip-export"
+                style="display:none;">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 16l4-5h-3V4h-2v7H8l4 5zM5 18v2h14v-2H5z" fill="currentColor" />
+                </svg>
+            </button>
+            <button id="close-window-button" class="icon-button" data-tooltip-i18n="tooltip-close"
+                style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 6L18 18M6 18L18 6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="../translations.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!window.electronAPI) return;
+
+            // Tooltip system - shows tooltips in main view
+            let tooltipTimeout = null;
+            let currentTooltip = null;
+
+            async function showTooltipInMainView(text, buttonRect) {
+                if (!text) return;
+                
+                // Calculate position - tooltip appears below the drag bar
+                const x = buttonRect.left + buttonRect.width / 2;
+                const isLightMode = document.documentElement.classList.contains('light-mode');
+                
+                const code = `
+                    (() => {
+                        // Remove existing tooltip
+                        const existing = document.getElementById('gemini-floating-tooltip');
+                        if (existing) existing.remove();
+                        
+                        // Detect light mode from the page
+                        const isLight = ${isLightMode} || document.documentElement.classList.contains('light-mode') || 
+                                        document.body.style.backgroundColor === 'rgb(255, 255, 255)' ||
+                                        window.getComputedStyle(document.body).backgroundColor === 'rgb(255, 255, 255)';
+                        
+                        // Create tooltip element
+                        const tooltip = document.createElement('div');
+                        tooltip.id = 'gemini-floating-tooltip';
+                        tooltip.textContent = '${text.replace(/'/g, "\\'")}';
+                        
+                        // Theme-aware styles
+                        const bgGradient = isLight 
+                            ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(0, 122, 255, 0.08) 100%)'
+                            : 'linear-gradient(135deg, rgba(30, 30, 30, 0.95) 0%, rgba(0, 191, 255, 0.15) 100%)';
+                        const textColor = isLight ? '#1a1a1a' : '#E0E0E0';
+                        const shadowColor = isLight 
+                            ? '0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 122, 255, 0.2)'
+                            : '0 8px 32px rgba(0, 191, 255, 0.3), 0 0 0 1px rgba(0, 191, 255, 0.2)';
+                        const pulseColors = isLight
+                            ? ['0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 122, 255, 0.2)', '0 8px 40px rgba(0, 0, 0, 0.2), 0 0 0 2px rgba(0, 122, 255, 0.35)', '0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 122, 255, 0.2)']
+                            : ['0 8px 32px rgba(0, 191, 255, 0.3), 0 0 0 1px rgba(0, 191, 255, 0.2)', '0 8px 40px rgba(0, 191, 255, 0.5), 0 0 0 2px rgba(0, 191, 255, 0.3)', '0 8px 32px rgba(0, 191, 255, 0.3), 0 0 0 1px rgba(0, 191, 255, 0.2)'];
+                        
+                        tooltip.style.cssText = \`
+                            position: fixed;
+                            top: 8px;
+                            left: ${x}px;
+                            transform: translateX(-50%) translateY(0) scale(0.8);
+                            background: \${bgGradient};
+                            color: \${textColor};
+                            padding: 10px 16px;
+                            border-radius: 12px;
+                            font-size: 12px;
+                            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+                            font-weight: 500;
+                            white-space: nowrap;
+                            opacity: 0;
+                            pointer-events: none;
+                            z-index: 999999;
+                            box-shadow: \${shadowColor};
+                            backdrop-filter: blur(12px);
+                            letter-spacing: 0.4px;
+                            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                        \`;
+                        
+                        document.body.appendChild(tooltip);
+                        
+                        // Check if tooltip overflows and adjust position
+                        requestAnimationFrame(() => {
+                            const tooltipRect = tooltip.getBoundingClientRect();
+                            const windowWidth = window.innerWidth;
+                            
+                            let adjustedX = ${x};
+                            
+                            // Check right overflow - add more padding
+                            if (tooltipRect.right > windowWidth - 20) {
+                                adjustedX = windowWidth - tooltipRect.width / 2 - 25;
+                                tooltip.style.left = adjustedX + 'px';
+                            }
+                            
+                            // Check left overflow - add more padding
+                            if (tooltipRect.left < 20) {
+                                adjustedX = tooltipRect.width / 2 + 25;
+                                tooltip.style.left = adjustedX + 'px';
+                            }
+                            
+                            tooltip.style.opacity = '1';
+                            tooltip.style.transform = 'translateX(-50%) translateY(0) scale(1)';
+                        });
+                        
+                        // Add pulse animation
+                        tooltip.animate([
+                            { boxShadow: pulseColors[0] },
+                            { boxShadow: pulseColors[1] },
+                            { boxShadow: pulseColors[2] }
+                        ], {
+                            duration: 2000,
+                            iterations: Infinity,
+                            easing: 'ease-in-out'
+                        });
+                        
+                        return true;
+                    })()
+                `;
+                
+                try {
+                    await window.electronAPI.executeInMainView(code);
+                    currentTooltip = text;
+                } catch (err) {
+                    console.error('Error showing tooltip:', err);
+                }
+            }
+
+            async function hideTooltipInMainView() {
+                if (!currentTooltip) return;
+                
+                const code = `
+                    (() => {
+                        const tooltip = document.getElementById('gemini-floating-tooltip');
+                        if (tooltip) {
+                            tooltip.style.opacity = '0';
+                            tooltip.style.transform = 'translateX(-50%) translateY(-10px) scale(0.8)';
+                            setTimeout(() => tooltip.remove(), 300);
+                        }
+                        return true;
+                    })()
+                `;
+                
+                try {
+                    await window.electronAPI.executeInMainView(code);
+                    currentTooltip = null;
+                } catch (err) {
+                    console.error('Error hiding tooltip:', err);
+                }
+            }
+
+            // Add tooltip handlers to all icon buttons
+            function setupTooltipHandlers() {
+                document.querySelectorAll('.icon-button').forEach(button => {
+                    button.addEventListener('mouseenter', (e) => {
+                        const tooltipText = button.getAttribute('data-tooltip');
+                        if (tooltipText) {
+                            clearTimeout(tooltipTimeout);
+                            tooltipTimeout = setTimeout(() => {
+                                const rect = button.getBoundingClientRect();
+                                showTooltipInMainView(tooltipText, rect);
+                            }, 200);
+                        }
+                    });
+                    
+                    button.addEventListener('mouseleave', () => {
+                        clearTimeout(tooltipTimeout);
+                        hideTooltipInMainView();
+                    });
+                    
+                    // Hide tooltip when clicking a button (important for buttons that trigger actions)
+                    button.addEventListener('click', () => {
+                        clearTimeout(tooltipTimeout);
+                        hideTooltipInMainView();
+                    });
+                    
+                    // Also handle mousedown to hide tooltip immediately when user starts clicking
+                    button.addEventListener('mousedown', () => {
+                        clearTimeout(tooltipTimeout);
+                        hideTooltipInMainView();
+                    });
+                });
+                
+                // Hide tooltip when mouse leaves the button container entirely
+                const buttonContainer = document.querySelector('.button-container');
+                if (buttonContainer) {
+                    buttonContainer.addEventListener('mouseleave', () => {
+                        clearTimeout(tooltipTimeout);
+                        hideTooltipInMainView();
+                    });
+                }
+                
+                // Global check - hide tooltip if mouse is not over any button
+                document.addEventListener('mouseover', (e) => {
+                    if (!e.target.closest('.icon-button')) {
+                        clearTimeout(tooltipTimeout);
+                        hideTooltipInMainView();
+                    }
+                });
+            }
+
+            const settingsButton = document.getElementById('settings-button');
+            const newWindowButton = document.getElementById('new-window-button');
+            const closeButton = document.getElementById('close-window-button');
+            const exportButton = document.getElementById('export-chat-button');
+            const fullscreenButton = document.getElementById('fullscreen-button');
+            const minimizeButton = document.getElementById('minimize-button');
+            const modeToggleButton = document.getElementById('mode-toggle-button');
+            const titleElement = document.getElementById('chat-title');
+            const buttonContainer = document.querySelector('.button-container');
+
+            let showChatTitle = true;
+            let latestTitle = '__NEW_CHAT__'; // Use a special key for new chats
+            let sortable = null;
+            let currentAppMode = 'gemini'; // Track current mode
+            const defaultButtonOrder = ['mode-toggle-button', 'minimize-button', 'new-window-button', 'fullscreen-button', 'export-chat-button', 'settings-button'];
+
+            const newChatTitles = new Set(Object.values(translations).map(t => t['new-chat']));
+            
+            // Save color before window closes
+            window.addEventListener('beforeunload', () => {
+                if (lastBackgroundColor && currentAppMode) {
+                    saveColor(currentAppMode, lastBackgroundColor);
+                    console.log(`Saving ${currentAppMode} color before window close:`, lastBackgroundColor);
+                }
+            });
+            
+            // Handle Ctrl+W to save color before closing
+            window.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'w') {
+                    if (lastBackgroundColor && currentAppMode) {
+                        saveColor(currentAppMode, lastBackgroundColor);
+                        console.log(`Saving ${currentAppMode} color on Ctrl+W:`, lastBackgroundColor);
+                    }
+                }
+            });
+
+            function getTranslation(key, lang) {
+                return (translations[lang] && translations[lang][key]) || translations['en'][key];
+            }
+
+            function applyTranslations(lang) {
+                document.querySelectorAll('[data-tooltip-i18n]').forEach(el => {
+                    const key = el.getAttribute('data-tooltip-i18n');
+                    if (key) el.setAttribute('data-tooltip', getTranslation(key, lang));
+                });
+                document.documentElement.lang = lang;
+                document.documentElement.dir = ['he'].includes(lang) ? 'rtl' : 'ltr';
+            }
+
+            function setButtonOrder(order) {
+                const orderToApply = (order && order.length > 0) ? order : defaultButtonOrder;
+                orderToApply.forEach(buttonId => {
+                    const button = document.getElementById(buttonId);
+                    if (button) buttonContainer.appendChild(button);
+                });
+            }
+
+            function setDraggable(enabled) {
+                if (enabled && !sortable) {
+                    sortable = new Sortable(buttonContainer, {
+                        animation: 150,
+                        ghostClass: 'sortable-ghost',
+                        chosenClass: 'sortable-chosen',
+                        dragClass: 'sortable-drag',
+                        onEnd: (evt) => {
+                            const newOrder = Array.from(buttonContainer.children).map(child => child.id);
+                            window.electronAPI.updateSetting('buttonOrder', newOrder);
+                        },
+                    });
+                } else if (!enabled && sortable) {
+                    sortable.destroy();
+                    sortable = null;
+                }
+            }
+
+            function detectTextDirection(text) {
+                if (!text) return 'ltr';
+
+                // Find the first non-whitespace character
+                const trimmed = text.trim();
+                if (!trimmed) return 'ltr';
+
+                // Check the first few characters (skip whitespace and punctuation)
+                for (let i = 0; i < Math.min(trimmed.length, 10); i++) {
+                    const char = trimmed[i];
+                    const code = char.charCodeAt(0);
+
+                    // Hebrew Unicode range: 0x0590 - 0x05FF
+                    if (code >= 0x0590 && code <= 0x05FF) {
+                        return 'rtl';
+                    }
+
+                    // Latin characters (English, etc.)
+                    if ((code >= 0x0041 && code <= 0x005A) || // A-Z
+                        (code >= 0x0061 && code <= 0x007A)) { // a-z
+                        return 'ltr';
+                    }
+                }
+
+                return 'ltr'; // Default to LTR
+            }
+
+            function updateTitleUI() {
+                const lang = document.documentElement.lang || 'en';
+                let displayTitle = '';
+                if (latestTitle === '__NEW_CHAT__') {
+                    displayTitle = getTranslation('new-chat', lang);
+                } else {
+                    displayTitle = latestTitle;
+                }
+
+                if (showChatTitle) {
+                    titleElement.style.animation = 'none';
+                    void titleElement.offsetWidth;
+                    titleElement.style.animation = 'fadeIn 0.5s ease-in-out';
+                    titleElement.textContent = displayTitle;
+
+                    // Set direction based on content
+                    const direction = detectTextDirection(displayTitle);
+                    titleElement.style.direction = direction;
+                    titleElement.style.textAlign = direction === 'rtl' ? 'right' : 'left';
+                } else {
+                    titleElement.textContent = '';
+                }
+            }
+
+            function handleSettingsUpdate(settings) {
+                const lang = settings.language || 'en';
+                applyTranslations(lang);
+                window.electronAPI.theme.getResolved().then(applyTheme);
+                closeButton.style.display = settings.showCloseButton ? 'flex' : 'none';
+                exportButton.style.display = settings.showExportButton ? 'flex' : 'none';
+                fullscreenButton.style.display = settings.showFullscreenButton !== false ? 'flex' : 'none';
+                newWindowButton.style.display = settings.showNewWindowButton !== false ? 'flex' : 'none';
+                minimizeButton.style.display = settings.showMinimizeButton !== false ? 'flex' : 'none';
+                showChatTitle = settings.showChatTitle !== false;
+                updateTitleUI();
+                setButtonOrder(settings.buttonOrder);
+                setDraggable(settings.draggableButtonsEnabled !== false);
+            }
+
+            window.electronAPI.getSettings().then(handleSettingsUpdate);
+            window.electronAPI.onSettingsUpdated(handleSettingsUpdate);
+
+            // Setup tooltip handlers after DOM is ready
+            setupTooltipHandlers();
+
+            settingsButton.addEventListener('click', () => window.electronAPI.openSettingsWindow());
+            newWindowButton.addEventListener('click', () => window.electronAPI.openNewWindow());
+            closeButton.addEventListener('click', () => window.close());
+            exportButton.addEventListener('click', () => window.electronAPI.exportChat());
+            minimizeButton.addEventListener('click', () => window.electronAPI.minimizeWindow());
+
+            fullscreenButton.addEventListener('click', () => {
+                const enterIcon = fullscreenButton.querySelector('.enter-fullscreen');
+                const exitIcon = fullscreenButton.querySelector('.exit-fullscreen');
+                const isEntering = enterIcon.style.display !== 'none';
+                window.electronAPI.toggleFullScreen();
+                enterIcon.style.display = isEntering ? 'none' : 'block';
+                exitIcon.style.display = isEntering ? 'block' : 'none';
+                const newTooltipKey = isEntering ? 'tooltip-exit-fullscreen' : 'tooltip-fullscreen';
+                fullscreenButton.setAttribute('data-tooltip-i18n', newTooltipKey);
+                fullscreenButton.setAttribute('data-tooltip', getTranslation(newTooltipKey, document.documentElement.lang));
+            });
+
+            // Mode toggle button - switch between Gemini and AI Studio
+            function updateModeToggleUI(mode) {
+                // Save current mode color before switching
+                if (lastBackgroundColor && currentAppMode) {
+                    saveColor(currentAppMode, lastBackgroundColor);
+                }
+                
+                currentAppMode = mode;
+                const geminiIcon = modeToggleButton.querySelector('.gemini-icon');
+                const aistudioIcon = modeToggleButton.querySelector('.aistudio-icon');
+                
+                if (mode === 'aistudio') {
+                    // Currently in AI Studio mode - show AI Studio icon, click will switch to Gemini
+                    geminiIcon.classList.remove('active');
+                    aistudioIcon.classList.add('active');
+                    modeToggleButton.setAttribute('data-tooltip', 'Switch to Gemini mode');
+                } else {
+                    // Currently in Gemini mode - show Gemini icon, click will switch to AI Studio
+                    geminiIcon.classList.add('active');
+                    aistudioIcon.classList.remove('active');
+                    modeToggleButton.setAttribute('data-tooltip', 'Switch to AI Studio mode');
+                }
+                
+                // Apply saved color for new mode
+                setTimeout(applySavedColor, 100);
+            }
+
+            modeToggleButton.addEventListener('click', () => {
+                const newMode = currentAppMode === 'gemini' ? 'aistudio' : 'gemini';
+                window.electronAPI.toggleAppMode(newMode);
+            });
+
+            // Get initial app mode
+            window.electronAPI.getAppMode().then(mode => {
+                if (mode) updateModeToggleUI(mode);
+            });
+
+            // Listen for app mode updates
+            window.electronAPI.onAppModeChanged((mode) => {
+                updateModeToggleUI(mode);
+            });
+
+            window.chatAPI.onTitleUpdate((title) => {
+                const titleEl = document.getElementById('chat-title');
+                
+                if (title === 'Generating title...') {
+                    // Use translation if available, or default
+                    const lang = document.documentElement.lang || 'en';
+                    const generatingText = getTranslation('generating-title', lang) || 'Generating title...';
+                    
+                    // Only update if different
+                    if (titleEl.textContent !== generatingText) {
+                        titleEl.textContent = generatingText;
+                        titleEl.classList.add('generating');
+                        titleEl.classList.remove('fade-in');
+                    }
+                    return;
+                }
+
+                titleEl.classList.remove('generating');
+
+                if (!title || newChatTitles.has(title)) {
+                    if (latestTitle !== '__NEW_CHAT__') {
+                        latestTitle = '__NEW_CHAT__';
+                        updateTitleUI();
+                    }
+                } else {
+                    // Only update if title actually changed
+                    if (latestTitle !== title) {
+                        latestTitle = title;
+                        updateTitleUI();
+                        
+                        // Trigger animation if title changed
+                        titleEl.classList.remove('fade-in');
+                        void titleEl.offsetWidth; // trigger reflow
+                        titleEl.classList.add('fade-in');
+                    }
+                }
+            });
+
+            window.electronAPI.onLanguageChanged(async (lang) => {
+                applyTranslations(lang);
+                updateTitleUI();
+            });
+
+            function applyTheme(theme) {
+                document.documentElement.classList.toggle('light-mode', theme === 'light');
+            }
+            window.electronAPI.theme.onUpdate(applyTheme);
+
+            // Sync drag bar color with main site background
+            let lastBackgroundColor = null;
+            let savedColors = {
+                gemini: null,
+                aistudio: null
+            };
+            
+            // Load saved colors from localStorage
+            function loadSavedColors() {
+                try {
+                    const saved = localStorage.getItem('savedBackgroundColors');
+                    if (saved) {
+                        savedColors = JSON.parse(saved);
+                        console.log('Loaded saved colors:', savedColors);
+                    }
+                } catch (err) {
+                    console.error('Error loading saved colors:', err);
+                }
+            }
+            
+            // Save colors to localStorage
+            function saveColor(mode, color) {
+                try {
+                    savedColors[mode] = color;
+                    localStorage.setItem('savedBackgroundColors', JSON.stringify(savedColors));
+                    console.log(`Saved ${mode} color:`, color);
+                } catch (err) {
+                    console.error('Error saving color:', err);
+                }
+            }
+            
+            // Apply saved color on startup if available
+            function applySavedColor() {
+                const savedColor = savedColors[currentAppMode];
+                if (savedColor) {
+                    console.log(`Applying saved ${currentAppMode} color:`, savedColor);
+                    const topBar = document.querySelector('.top-bar');
+                    if (topBar) {
+                        topBar.style.backgroundColor = savedColor;
+                        lastBackgroundColor = savedColor;
+                    }
+                }
+            }
+            
+            async function syncBackgroundColor() {
+                try {
+                    // Query multiple possible background colors from the main site
+                    const bgColor = await window.electronAPI.executeInMainView(`
+                        (() => {
+                            const root = document.documentElement;
+                            const body = document.body;
+                            const header = document.querySelector('header, .header, [role="banner"], .top-bar, .app-bar');
+                            
+                            // Try to get the most visible background color
+                            const rootBg = window.getComputedStyle(root).backgroundColor;
+                            const bodyBg = window.getComputedStyle(body).backgroundColor;
+                            const headerBg = header ? window.getComputedStyle(header).backgroundColor : null;
+                            
+                            // Return the first non-transparent color
+                            if (headerBg && headerBg !== 'rgba(0, 0, 0, 0)' && headerBg !== 'transparent') {
+                                return headerBg;
+                            }
+                            if (bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)' && bodyBg !== 'transparent') {
+                                return bodyBg;
+                            }
+                            return rootBg;
+                        })()
+                    `);
+                    
+                    if (bgColor && bgColor !== lastBackgroundColor) {
+                        console.log('Updating drag bar background color to:', bgColor);
+                        const topBar = document.querySelector('.top-bar');
+                        if (topBar) {
+                            topBar.style.backgroundColor = bgColor;
+                            lastBackgroundColor = bgColor;
+                            // Save the color for the current mode
+                            saveColor(currentAppMode, bgColor);
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error syncing background color:', err);
+                }
+            }
+            
+            // Random interval save function
+            function scheduleRandomSave() {
+                // Random interval between 30-60 seconds
+                const randomInterval = 30000 + Math.random() * 30000;
+                setTimeout(() => {
+                    if (lastBackgroundColor) {
+                        saveColor(currentAppMode, lastBackgroundColor);
+                        console.log(`Random save of ${currentAppMode} color:`, lastBackgroundColor);
+                    }
+                    scheduleRandomSave(); // Schedule next random save
+                }, randomInterval);
+            }
+            
+            // Load saved colors on startup
+            loadSavedColors();
+            
+            // Apply saved color immediately if available
+            setTimeout(applySavedColor, 100);
+
+            // Initial sync after page loads
+            setTimeout(syncBackgroundColor, 500);
+
+            // Check every 500ms for color changes
+            setInterval(syncBackgroundColor, 500);
+            
+            // Start random save scheduler
+            scheduleRandomSave();
+
+            // ========== SMART CHAT TITLE MONITORING SYSTEM ==========
+            // This system monitors the Gemini page title in real-time and updates drag.html automatically
+            // It works alongside the old system as a backup
+            
+            let lastMonitoredTitle = null;
+            let isWaitingForTitle = false;
+            let messageSendDetected = false;
+            let titleMonitoringInterval = null;
+            let isInitialLoad = true; // Track if this is the first load
+
+            // Function to get title directly from the Gemini page (primary method - span.conversation-title)
+            async function getTitleFromGeminiPage() {
+                try {
+                    const title = await window.electronAPI.executeInMainView(`
+                        (() => {
+                            try {
+                                // PRIMARY: Look for the conversation title span element
+                                const titleSpan = document.querySelector('span.conversation-title');
+                                if (titleSpan) {
+                                    const text = titleSpan.textContent.trim();
+                                    if (text) return text;
+                                }
+                                
+                                return null;
+                            } catch (e) {
+                                return null;
+                            }
+                        })()
+                    `);
+                    
+                    return title;
+                } catch (err) {
+                    console.error('Error getting title from Gemini page:', err);
+                    return null;
+                }
+            }
+
+            // Function to get title from nav bar (fallback method)
+            async function getTitleFromNavBar() {
+                try {
+                    const title = await window.electronAPI.executeInMainView(`
+                        (() => {
+                            try {
+                                // Fallback: Look in nav bar and other locations
+                                const selectors = [
+                                    '.conversation-title',
+                                    '[data-test-id="conversation-title"]',
+                                    'h1.conversation-title',
+                                    '.chat-title'
+                                ];
+                                
+                                for (const selector of selectors) {
+                                    const el = document.querySelector(selector);
+                                    if (el) {
+                                        const t = (el.textContent || el.innerText || '').trim();
+                                        if (t) return t;
+                                    }
+                                }
+                                
+                                return null;
+                            } catch (e) {
+                                return null;
+                            }
+                        })()
+                    `);
+                    
+                    return title;
+                } catch (err) {
+                    console.error('Error getting title from nav bar:', err);
+                    return null;
+                }
+            }
+
+            // Detect if user sent a message (using MutationObserver on chat history)
+            async function detectMessageSend() {
+                try {
+                    await window.electronAPI.executeInMainView(`
+                        (() => {
+                            if (window.__titleMonitorInstalled) return;
+                            window.__titleMonitorInstalled = true;
+                            
+                            // 1. Watch for new user messages in the chat history
+                            const observeChatHistory = () => {
+                                // Find the chat history container
+                                const historyContainer = document.querySelector('infinite-scroller, .chat-history, ms-autoscroll-container');
+                                
+                                if (historyContainer && !historyContainer.__titleMonitorObserver) {
+                                    console.log('Attaching observer to chat history');
+                                    
+                                    const observer = new MutationObserver((mutations) => {
+                                        for (const mutation of mutations) {
+                                            if (mutation.addedNodes.length) {
+                                                // Check if added node is a user query
+                                                const added = mutation.addedNodes[0];
+                                                if (added && added.nodeType === 1) {
+                                                    // Check for user query classes or attributes
+                                                    if (added.tagName === 'USER-QUERY' || 
+                                                        added.classList?.contains('user-query-container') ||
+                                                        added.querySelector?.('.user-query-container') ||
+                                                        added.querySelector?.('.query-text')) {
+                                                        
+                                                        window.__messageSent = true;
+                                                        console.log('Message send detected via DOM mutation');
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    });
+                                    
+                                    observer.observe(historyContainer, { childList: true, subtree: true });
+                                    historyContainer.__titleMonitorObserver = observer;
+                                }
+                            };
+                            
+                            // 2. Watch for URL changes (often happens when new chat is created)
+                            let lastUrl = location.href;
+                            setInterval(() => {
+                                if (location.href !== lastUrl) {
+                                    lastUrl = location.href;
+                                    // If URL changed from /app to /app/..., it might be a new chat creation
+                                    if (lastUrl.includes('/app/')) {
+                                        // We don't set messageSent here, but we could trigger a title check
+                                    }
+                                }
+                                // Re-attach observer if lost (e.g. navigation)
+                                observeChatHistory();
+                            }, 1000);
+                            
+                            // 3. Fallback: Watch for Enter key in input areas (keep this as backup)
+                            const checkTextInput = () => {
+                                const textarea = document.querySelector('rich-textarea .ql-editor, .text-input-field textarea, [contenteditable="true"][role="textbox"]');
+                                if (textarea && !textarea.__titleMonitorListener) {
+                                    textarea.__titleMonitorListener = true;
+                                    textarea.addEventListener('keydown', (e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            window.__messageSent = true;
+                                            console.log('Message send detected via Enter key');
+                                        }
+                                    });
+                                }
+                            };
+                            
+                            // 4. Fallback: Watch for send button clicks
+                            const checkSendButton = () => {
+                                const sendButton = document.querySelector('button.send-button, button[aria-label*="Send"]');
+                                if (sendButton && !sendButton.__titleMonitorListener) {
+                                    sendButton.__titleMonitorListener = true;
+                                    sendButton.addEventListener('click', () => {
+                                        window.__messageSent = true;
+                                        console.log('Message send detected via button');
+                                    });
+                                }
+                            };
+                            
+                            // Initial setup
+                            observeChatHistory();
+                            checkTextInput();
+                            checkSendButton();
+                            
+                            // Periodic checks
+                            setInterval(() => {
+                                checkTextInput();
+                                checkSendButton();
+                            }, 2000);
+                        })()
+                    `);
+                } catch (err) {
+                    console.error('Error setting up message send detection:', err);
+                }
+            }
+
+            // Check if message was sent
+            async function checkMessageSent() {
+                try {
+                    const wasSent = await window.electronAPI.executeInMainView(`
+                        (() => {
+                            const sent = window.__messageSent || false;
+                            window.__messageSent = false; // Reset
+                            return sent;
+                        })()
+                    `);
+                    return wasSent;
+                } catch (err) {
+                    return false;
+                }
+            }
+
+            // Update title with animation
+            function updateTitleWithAnimation(newTitle, isFromLoading = false) {
+                const titleEl = document.getElementById('chat-title');
+                
+                // Use the new title
+                const displayTitle = newTitle || getTranslation('new-chat', document.documentElement.lang || 'en');
+                
+                // Check if the title is actually different from current
+                const currentTitle = titleEl.textContent;
+                if (currentTitle === displayTitle) {
+                    console.log('Title unchanged, skipping animation:', displayTitle);
+                    return; // Don't animate if it's the same title
+                }
+                
+                console.log('Title changed from "' + currentTitle + '" to "' + displayTitle + '", animating...');
+                
+                // Remove all animation classes
+                titleEl.classList.remove('generating', 'loading', 'fade-in', 'slide-in');
+                
+                // Set the new title
+                titleEl.textContent = displayTitle;
+                
+                // Apply appropriate animation
+                if (isFromLoading) {
+                    // Slide in animation when coming from loading state
+                    void titleEl.offsetWidth; // Force reflow
+                    titleEl.classList.add('slide-in');
+                } else {
+                    // Fade in for regular updates
+                    void titleEl.offsetWidth; // Force reflow
+                    titleEl.classList.add('fade-in');
+                }
+                
+                // Update direction based on content
+                const direction = detectTextDirection(displayTitle);
+                titleEl.style.direction = direction;
+            }
+
+            // Main monitoring function
+            async function monitorTitleChanges() {
+                // Ensure detection script is installed (in case of page reload/navigation)
+                await detectMessageSend();
+
+                // Check if message was sent
+                const wasSent = await checkMessageSent();
+                
+                if (wasSent && !isWaitingForTitle) {
+                    const currentTitle = await getTitleFromGeminiPage();
+                    
+                    // Check if we're on a "New chat" and user sent a message
+                    if (currentTitle === 'New chat' || newChatTitles.has(currentTitle) || !currentTitle) {
+                        console.log('Message sent on new chat - showing loading state and waiting 5 seconds for span.conversation-title');
+                        isWaitingForTitle = true;
+                        messageSendDetected = true;
+                        
+                        // Show loading state
+                        const titleEl = document.getElementById('chat-title');
+                        titleEl.classList.remove('fade-in', 'slide-in');
+                        titleEl.classList.add('loading');
+                        const lang = document.documentElement.lang || 'en';
+                        const loadingText = getTranslation('generating-title', lang) || 'Loading';
+                        titleEl.textContent = loadingText;
+                        
+                        // Wait 5 seconds, then try fallback if still waiting
+                        setTimeout(async () => {
+                            if (isWaitingForTitle) {
+                                console.log('5 seconds passed, trying nav bar fallback...');
+                                const fallbackTitle = await getTitleFromNavBar();
+                                if (fallbackTitle && !newChatTitles.has(fallbackTitle) && fallbackTitle !== 'New chat') {
+                                    console.log('Found title via nav bar fallback:', fallbackTitle);
+                                    isWaitingForTitle = false;
+                                    messageSendDetected = false;
+                                    lastMonitoredTitle = fallbackTitle;
+                                    updateTitleWithAnimation(fallbackTitle, true);
+                                    latestTitle = fallbackTitle;
+                                }
+                            }
+                        }, 5000);
+                    }
+                }
+                
+                // Get current title from Gemini page (primary method only)
+                const currentTitle = await getTitleFromGeminiPage();
+                
+                // Check if title changed
+                if (currentTitle && currentTitle !== lastMonitoredTitle) {
+                    // Ignore "New chat" titles unless we're not in loading state
+                    const isNewChat = currentTitle === 'New chat' || newChatTitles.has(currentTitle);
+                    
+                    if (!isNewChat || !isWaitingForTitle) {
+                        console.log('Title changed from', lastMonitoredTitle, 'to', currentTitle);
+                        
+                        if (!isNewChat && isWaitingForTitle) {
+                            // We got a real title after loading state!
+                            console.log('Real title appeared after loading:', currentTitle);
+                            lastMonitoredTitle = currentTitle;
+                            isWaitingForTitle = false;
+                            messageSendDetected = false;
+                            updateTitleWithAnimation(currentTitle, true);
+                            
+                            // Update the old system too
+                            latestTitle = currentTitle;
+                        } else if (!isWaitingForTitle) {
+                            // Regular title update - only if it's truly different and not a "New chat"
+                            if (!isNewChat) {
+                                lastMonitoredTitle = currentTitle;
+                                updateTitleWithAnimation(currentTitle, false);
+                                latestTitle = currentTitle;
+                            }
+                        }
+                    } else if (isNewChat && !isWaitingForTitle) {
+                        // Reset to new chat when not waiting for title - but don't overwrite if we already have a real title
+                        if (latestTitle === '__NEW_CHAT__' || lastMonitoredTitle === null) {
+                            lastMonitoredTitle = currentTitle;
+                            latestTitle = '__NEW_CHAT__';
+                            updateTitleUI();
+                        }
+                    }
+                }
+            }
+
+            // Start the monitoring system
+            function startTitleMonitoring() {
+                console.log('Starting smart title monitoring system...');
+                
+                // Set up message send detection
+                detectMessageSend();
+                
+                // Monitor title changes every 500ms
+                if (titleMonitoringInterval) {
+                    clearInterval(titleMonitoringInterval);
+                }
+                
+                titleMonitoringInterval = setInterval(monitorTitleChanges, 500);
+                
+                // Initial check - but only set to "New chat" on first load if no title exists
+                setTimeout(async () => {
+                    if (isInitialLoad) {
+                        const currentTitle = await getTitleFromGeminiPage();
+                        const isNewChat = !currentTitle || currentTitle === 'New chat' || newChatTitles.has(currentTitle);
+                        
+                        if (isNewChat) {
+                            // First load with new chat - set to "New chat"
+                            console.log('Initial load: Setting to New chat');
+                            lastMonitoredTitle = 'New chat';
+                            latestTitle = '__NEW_CHAT__';
+                            updateTitleUI();
+                        } else {
+                            // First load with existing chat - use that title
+                            console.log('Initial load: Found existing chat title:', currentTitle);
+                            lastMonitoredTitle = currentTitle;
+                            latestTitle = currentTitle;
+                            updateTitleWithAnimation(currentTitle, false);
+                        }
+                        
+                        isInitialLoad = false;
+                    }
+                    
+                    monitorTitleChanges();
+                }, 1000);
+            }
+
+            // Initialize monitoring system when page loads
+            setTimeout(() => {
+                if (window.electronAPI && window.electronAPI.executeInMainView) {
+                    startTitleMonitoring();
+                    console.log('✓ Smart title monitoring system initialized');
+                }
+            }, 1500);
+
+            // Re-initialize if window regains focus
+            window.addEventListener('focus', () => {
+                if (titleMonitoringInterval && window.electronAPI) {
+                    console.log('Window focused - refreshing title monitoring');
+                    monitorTitleChanges();
+                }
+            });
+
+            // ========== END SMART TITLE MONITORING SYSTEM ==========
+        });
+    </script>
+
+</body>
+
+</html>

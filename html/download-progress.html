@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Downloading Update</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+    :root {
+      --bg-primary: #020010;
+      --text-primary: #e0eaff;
+      --glass-bg: rgba(10, 15, 30, 0.4);
+      --glass-border: rgba(0, 234, 255, 0.15);
+      --glow-primary: #0077ff;
+      --glow-secondary: #00eaff;
+      --success-color: #39ff8d;
+    }
+    html, body {
+      margin: 0; padding: 0;
+      height: 100%; width: 100%;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      user-select: none; overflow: hidden;
+    }
+    .window {
+      width: 320px; height: 160px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(24px) saturate(150%);
+      -webkit-backdrop-filter: blur(24px) saturate(150%);
+      border-radius: 16px;
+      box-shadow: 0 0 80px rgba(0,0,0,0.5), 0 0 20px rgba(0,234,255,0.25) inset;
+      padding: 25px;
+      text-align: center;
+    }
+    #percent { margin: 10px 0; font-weight: 700; }
+    .progress {
+      width: 100%; height: 12px;
+      border: 1px solid var(--glass-border);
+      border-radius: 6px; overflow: hidden;
+    }
+    .bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--glow-primary), var(--glow-secondary));
+      transition: width .2s ease;
+    }
+    #complete { display: none; }
+    .button {
+      border: none; padding: 8px 15px; border-radius: 8px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      margin: 5px; color: var(--bg-primary);
+      background: var(--success-color);
+    }
+    .button.secondary {
+      background: transparent; color: var(--text-primary);
+      border: 1px solid var(--glass-border);
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <h3 id="status">Downloading...</h3>
+    <div class="progress"><div id="bar" class="bar"></div></div>
+    <div id="percent">0%</div>
+    <div id="complete">
+      <p>Download complete. Install now?</p>
+      <button id="install-now" class="button">Install Now</button>
+      <button id="install-later" class="button secondary">Later</button>
+    </div>
+  </div>
+<script>
+  const api = window.electronAPI;
+  api.onUpdateStatus((data) => {
+    if (data.status === 'downloading') {
+      document.getElementById('bar').style.width = data.percent + '%';
+      document.getElementById('percent').textContent = data.percent + '%';
+    } else if (data.status === 'downloaded') {
+      document.getElementById('status').textContent = 'Download Complete!';
+      document.getElementById('percent').style.display = 'none';
+      document.querySelector('.progress').style.display = 'none';
+      document.getElementById('complete').style.display = 'block';
+    }
+  });
+  document.getElementById('install-now').addEventListener('click', () => api.installUpdateNow());
+  document.getElementById('install-later').addEventListener('click', () => api.closeDownloadWindow());
+</script>
+</body>
+</html>
