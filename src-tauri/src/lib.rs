@@ -86,8 +86,12 @@ async fn save_setting(app: tauri::AppHandle, key: String, value: serde_json::Val
     use tauri_plugin_store::StoreExt;
     
     let store = app.store("settings.json").map_err(|e| format!("Failed to access store: {:?}", e))?;
-    store.set(key, value);
-    store.save().map_err(|e| format!("Failed to save settings: {:?}", e))?;
+    
+    // Set the value (store.set doesn't return an error)
+    store.set(key.clone(), value.clone());
+    
+    // Save to disk
+    store.save().map_err(|e| format!("Failed to save settings for key '{}': {:?}", key, e))?;
     
     Ok(())
 }
